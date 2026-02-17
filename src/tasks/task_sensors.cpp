@@ -2,6 +2,8 @@
 #include "task_sensors.h"
 #include "drivers/mpu6500.h"
 #include "config.h"
+#include "mqtt_mgr.h"
+
 
 #if DEBUG_MODE
   #define DEBUG_PRINT(x) Serial.print(x)
@@ -298,6 +300,31 @@ void task_sensors(void *pvParameters) {
 
             lastDebug = now;
         }
+
+        // =============================
+        // ENVIO MQTT
+        // =============================
+        static unsigned long lastMqttSend = 0;
+
+        if (millis() - lastMqttSend > 500) {
+
+            if (mqtt_is_connected()) {
+
+                String payload = "{";
+                payload += "\"pitch\":" + String(pitch, 2) + ",";
+                payload += "\"roll\":" + String(roll, 2) + ",";
+                payload += "\"accMag\":" + String(accMag, 2) + ",";
+                payload += "\"gyroMag\":" + String(gyroMag, 2) + ",";
+                payload += "\"jerk\":" + String(jerk, 2) + ",";
+                payload += "\"state\":" + String(fallState);
+                payload += "}";
+
+                mqtt_publish("smartwatch/imu", payload);
+            }
+
+            lastMqttSend = millis();
+        }
+
 
         vTaskDelay(pdMS_TO_TICKS(SAMPLE_RATE_MS));
     }
