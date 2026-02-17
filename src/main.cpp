@@ -5,7 +5,8 @@
 #include "tasks/task_sensors.h"
 #include "config.h"
 #include "i2c_bus.h"
-#include "app_config.h"   // SSID e senha
+#include "app_config.h"
+#include "mqtt_mgr.h"
 
 // ===============================
 // Mutex global do barramento I2C
@@ -22,7 +23,7 @@ static void wifi_connect() {
 #endif
 
     WiFi.mode(WIFI_STA);
-    WiFi.setSleep(false);   // evita instabilidade em IoT
+    WiFi.setSleep(false);
     WiFi.begin(WIFI_SSID, WIFI_PASS);
 
     unsigned long startAttempt = millis();
@@ -53,6 +54,31 @@ static void wifi_connect() {
 }
 
 // ===============================
+// FUNÇÃO CONEXÃO MQTT
+// ===============================
+static void mqtt_connect_blocking() {
+
+    if (WiFi.status() != WL_CONNECTED)
+        return;
+
+#if DEBUG_MODE
+    Serial.println("[MQTT] Conectando...");
+#endif
+
+    if (mqtt_connect()) {
+#if DEBUG_MODE
+        Serial.println("[MQTT] Conectado ao broker!");
+#endif
+
+        mqtt_publish("smartwatch/status", "online");
+    } else {
+#if DEBUG_MODE
+        Serial.println("[MQTT] Falha na conexão.");
+#endif
+    }
+}
+
+// ===============================
 // SETUP
 // ===============================
 void setup() {
@@ -78,8 +104,8 @@ void setup() {
     // =========================
     // INICIALIZA I2C
     // =========================
-    Wire.begin(21, 22);      // SDA, SCL
-    Wire.setClock(100000);   // 100kHz estável
+    Wire.begin(21, 22);
+    Wire.setClock(100000);
     Wire.setTimeout(50);
 
 #if DEBUG_MODE
@@ -89,7 +115,7 @@ void setup() {
     delay(200);
 
     // =========================
-    // SCANNER I2C (DEBUG)
+    // SCANNER I2C
     // =========================
 #if DEBUG_MODE
     Serial.println("=== Scanner I2C ===");
@@ -111,6 +137,11 @@ void setup() {
     wifi_connect();
 
     // =========================
+    // CONECTA MQTT
+    // =========================
+    mqtt_connect_blocking();
+
+    // =========================
     // CRIA TASK DOS SENSORES
     // =========================
     xTaskCreatePinnedToCore(
@@ -120,7 +151,7 @@ void setup() {
         NULL,
         1,
         NULL,
-        1   // Core 1
+        1
     );
 }
 
@@ -129,7 +160,7 @@ void setup() {
 // ===============================
 void loop() {
 
-    // Reconexão automática simples
+    // Reconecta WiFi se cair
     if (WiFi.status() != WL_CONNECTED) {
 #if DEBUG_MODE
         Serial.println("[WIFI] Reconectando...");
@@ -137,5 +168,15 @@ void loop() {
         wifi_connect();
     }
 
-    delay(5000);
+    // Reconecta MQTT se cair
+    if (!mqtt_is_connected()) {
+#if DEBUG_MODE
+        Serial.println("[MQTT] Reconectando...");
+#endif
+        mqtt_connect_blocking();
+    }
+
+    mqtt_loop();
+
+    delay(2000);
 }

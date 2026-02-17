@@ -22,3 +22,11 @@
 
 // Tempo máximo tentando conectar (ms)
 #define WIFI_CONNECT_TIMEOUT_MS 15000
+
+
+// ===== MQTT =====
+#define MQTT_HOST "87a490b8ab324342ab84c48829e097ce.s1.eu.hivemq.cloud"
+#define MQTT_PORT 8883
+#define MQTT_USER "elciobsjr"
+#define MQTT_PASS "9Fsp2T!PKmKWRPr"
+
