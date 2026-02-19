@@ -15,18 +15,32 @@
   #define DEBUG_PRINTF(...)
 #endif
 
+
+static unsigned long freeFallStart = 0;
+
 // =========================
 // CONFIGURAÇÃO
 // =========================
 #define SAMPLE_RATE_MS 10
 
-#define FREE_FALL_THRESHOLD_G   0.85
+/*#define FREE_FALL_THRESHOLD_G   0.85
 #define IMPACT_THRESHOLD_G      1.4
 #define JERK_THRESHOLD          3.0
 #define GYRO_THRESHOLD          80.0
 
 #define IMMOBILITY_TIME_MS      3000
-#define IMMOBILITY_GYRO_LIMIT   6.0
+#define IMMOBILITY_GYRO_LIMIT   6.0 valores proximos da realidade*/
+
+#define FREE_FALL_THRESHOLD_G   0.95   // praticamente qualquer alívio vira free fall
+#define IMPACT_THRESHOLD_G      1.2    // impacto muito leve já conta
+#define JERK_THRESHOLD          0.8    // qualquer variação registra
+#define GYRO_THRESHOLD          30.0   // giros leves contam
+#define IMMOBILITY_TIME_MS      500    // 0.2s parado já confirma
+#define IMMOBILITY_GYRO_LIMIT   50.0   // quase qualquer redução de giro confirma
+
+
+
+
 
 #define DEBUG_INTERVAL_MS       2000
 #define EVENT_BUFFER_SIZE       200
@@ -163,11 +177,29 @@ void task_sensors(void *pvParameters) {
     unsigned long lastTime = millis();
     unsigned long lastDebug = 0;
 
+    FallState previousState = NORMAL;
+
+
     while (true) {
-
+        // =============================
         // LEITURA ÚNICA E VALIDADA
+        // =============================
+        static int failCount = 0;
 
-        // Aplicar offsets
+        if (!mpu_read_raw(&d)) {
+
+            failCount++;
+
+            if (failCount % 20 == 0)
+                Serial.println("[MPU] Falha I2C (retry)");
+
+            vTaskDelay(pdMS_TO_TICKS(30));
+            continue;
+        }
+
+        failCount = 0;
+
+        // Aplicar offsets APÓS leitura válida
         d.gx -= gyro_offset_x;
         d.gy -= gyro_offset_y;
         d.gz -= gyro_offset_z;
@@ -175,32 +207,6 @@ void task_sensors(void *pvParameters) {
         d.ax -= acc_offset_x;
         d.ay -= acc_offset_y;
         d.az -= acc_offset_z;
-
-
-        if (!mpu_read_raw(&d)) {
-
-        static int failCount = 0;
-
-        if (!mpu_read_raw(&d)) {
-        failCount++;
-        if (failCount % 20 == 0) Serial.println("[MPU] Falha I2C (retry)");
-        vTaskDelay(pdMS_TO_TICKS(30));
-        continue;
-        }
-        failCount = 0;
-
-
-        #if DEBUG_MODE
-            Serial.println("MPU desconectado ou erro I2C");
-        #endif
-
-            pitch = 0;
-            roll = 0;
-
-            vTaskDelay(pdMS_TO_TICKS(50));
-            continue;
-        }
-
 
         // =============================
         // Delta tempo estável
@@ -245,15 +251,25 @@ void task_sensors(void *pvParameters) {
             case NORMAL:
                 if (accMag < FREE_FALL_THRESHOLD_G) {
                     fallState = FREE_FALL;
+                    freeFallStart = now;
                 }
                 break;
 
             case FREE_FALL:
+
+                // Se detectar impacto dentro de 1 segundo
                 if (accMag > IMPACT_THRESHOLD_G) {
                     fallState = IMPACT;
                     store_event(pitch, roll, accMag, gyroMag, jerk, fallState);
                 }
+
+                // Se passou muito tempo sem impacto → cancela
+                else if (now - freeFallStart > 1000) {
+                    fallState = NORMAL;
+                }
+
                 break;
+
 
             case IMPACT:
                 fallState = IMMOBILITY_CHECK;
@@ -265,14 +281,109 @@ void task_sensors(void *pvParameters) {
                     accMag > 0.85 && accMag < 1.15)
                 {
                     if (now - immobilityStart > IMMOBILITY_TIME_MS) {
-                        store_event(pitch, roll, accMag, gyroMag, jerk, fallState);
-                        fallState = NORMAL;
+                        #if DEBUG_MODE
+                        Serial.println("QUEDA CONFIRMADA!");
+                    #else
+                        Serial.println("ALERTA: QUEDA CONFIRMADA!");
+                    #endif
+
+                    store_event(pitch, roll, accMag, gyroMag, jerk, fallState);
+                    fallState = NORMAL;
+
                     }
                 } else {
                     fallState = NORMAL;
                 }
                 break;
         }
+
+        /*if (fallState != previousState) {
+
+        #if DEBUG_MODE
+
+            switch (fallState) {
+                case NORMAL:
+                    Serial.println("Estado -> NORMAL");
+                    break;
+
+                case FREE_FALL:
+                    Serial.println("Estado -> POSSIVEL QUEDA (FREE FALL)");
+                    break;
+
+                case IMPACT:
+                    Serial.println("Estado -> IMPACTO DETECTADO!");
+                    break;
+
+                case IMMOBILITY_CHECK:
+                    Serial.println("Estado -> VERIFICANDO IMOBILIDADE...");
+                    break;
+            }
+
+        #else
+            // MODO PRODUÇÃO → só alertas importantes
+            if (fallState == IMPACT) {
+                Serial.println("ALERTA: IMPACTO DETECTADO!");
+            }
+
+            if (fallState == IMMOBILITY_CHECK) {
+                Serial.println("ALERTA: POSSIVEL QUEDA CONFIRMADA!");
+            }
+
+        #endif
+
+            previousState = fallState;
+        }*/
+
+        if (fallState != previousState) {
+
+        #if DEBUG_MODE
+
+            // MODO DEBUG → detalhado
+            switch (fallState) {
+                case NORMAL:
+                    Serial.println("Estado -> NORMAL");
+                    break;
+
+                case FREE_FALL:
+                    Serial.println("Estado -> POSSIVEL QUEDA (FREE FALL)");
+                    break;
+
+                case IMPACT:
+                    Serial.println("Estado -> IMPACTO DETECTADO!");
+                    break;
+
+                case IMMOBILITY_CHECK:
+                    Serial.println("Estado -> VERIFICANDO IMOBILIDADE...");
+                    break;
+            }
+
+        #else
+
+            // MODO PRODUÇÃO → apenas status importantes
+            switch (fallState) {
+                case FREE_FALL:
+                    Serial.println("POSSIVEL QUEDA DETECTADA");
+                    break;
+
+                case IMPACT:
+                    Serial.println("IMPACTO DETECTADO!");
+                    break;
+
+                case IMMOBILITY_CHECK:
+                    Serial.println("VERIFICANDO IMOBILIDADE...");
+                    break;
+
+                default:
+                    break; // não imprime NORMAL
+            }
+
+        #endif
+
+            previousState = fallState;
+        }
+
+
+
 
         // =============================
         // Eventos estilo Apple (Jerk + Giro)
@@ -329,3 +440,4 @@ void task_sensors(void *pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(SAMPLE_RATE_MS));
     }
 }
+
