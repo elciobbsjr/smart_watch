@@ -3,6 +3,7 @@
 #include <WiFi.h>
 
 #include "tasks/task_sensors.h"
+#include "tasks/task_heart.h"   // <<< NOVA TASK
 #include "config.h"
 #include "i2c_bus.h"
 #include "app_config.h"
@@ -114,9 +115,6 @@ void setup() {
 
     delay(200);
 
-    // =========================
-    // SCANNER I2C
-    // =========================
 #if DEBUG_MODE
     Serial.println("=== Scanner I2C ===");
 
@@ -147,6 +145,19 @@ void setup() {
     xTaskCreatePinnedToCore(
         task_sensors,
         "TaskSensors",
+        4096,
+        NULL,
+        1,
+        NULL,
+        1
+    );
+
+    // =========================
+    // CRIA TASK DO HEART RATE
+    // =========================
+    xTaskCreatePinnedToCore(
+        taskHeart,
+        "TaskHeart",
         4096,
         NULL,
         1,
