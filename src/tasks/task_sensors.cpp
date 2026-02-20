@@ -399,7 +399,7 @@ void task_sensors(void *pvParameters) {
         // =============================
         if (DEBUG_MODE && (now - lastDebug > DEBUG_INTERVAL_MS)) {
 
-            DEBUG_PRINTF(
+            /*DEBUG_PRINTF(
             "Pitch: %.2f | Roll: %.2f | accMag: %.2f | gyroMag: %.2f | jerk: %.2f | State: %d\n",
             pitch, roll, accMag, gyroMag, jerk, fallState
             );
