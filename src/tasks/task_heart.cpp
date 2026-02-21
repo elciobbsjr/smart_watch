@@ -3,7 +3,10 @@
 #include "task_heart.h"
 #include "../drivers/max30105_driver.h"
 #include "config.h"
+#include "telemetry.h"
 
+
+extern SemaphoreHandle_t g_telemetryMutex;
 extern SemaphoreHandle_t g_i2cMutex;
 
 static MAX30105Driver heartSensor;
@@ -43,18 +46,24 @@ void taskHeart(void *pvParameters)
 
             float bpm = heartSensor.getBPM();
 
-            if (bpm > 0) {
+        if (bpm > 0) {
 
-                uint32_t now = millis();
-
-                if (now - lastPrint >= PRINT_INTERVAL_MS) {
-
-                    Serial.print("BPM: ");
-                    Serial.println(bpm, 1);
-
-                    lastPrint = now;
-                }
+            // Atualiza estrutura global protegida
+            if (xSemaphoreTake(g_telemetryMutex, pdMS_TO_TICKS(5))) {
+                g_telemetry.bpm = bpm;
+                xSemaphoreGive(g_telemetryMutex);
             }
+
+            uint32_t now = millis();
+
+            if (now - lastPrint >= PRINT_INTERVAL_MS) {
+
+                Serial.print("BPM: ");
+                Serial.println(bpm, 1);
+
+                lastPrint = now;
+            }
+        }
         }
 
         vTaskDelay(pdMS_TO_TICKS(5));

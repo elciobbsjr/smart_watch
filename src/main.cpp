@@ -8,12 +8,14 @@
 #include "i2c_bus.h"
 #include "app_config.h"
 #include "mqtt_mgr.h"
+#include "tasks/task_telemetry.h"
 
 // ===============================
 // Mutex global do barramento I2C
 // ===============================
-SemaphoreHandle_t g_i2cMutex = nullptr;
 
+SemaphoreHandle_t g_i2cMutex = nullptr;
+SemaphoreHandle_t g_telemetryMutex = nullptr;
 // ===============================
 // FUNÇÃO CONEXÃO WIFI
 // ===============================
@@ -103,6 +105,18 @@ void setup() {
     }
 
     // =========================
+    // CRIA MUTEX DA TELEMETRY
+    // =========================
+    g_telemetryMutex = xSemaphoreCreateMutex();
+
+    if (g_telemetryMutex == NULL) {
+    #if DEBUG_MODE
+        Serial.println("Erro ao criar mutex Telemetry!");
+    #endif
+        while (1);
+    }
+
+    // =========================
     // INICIALIZA I2C
     // =========================
     Wire.begin(21, 22);
@@ -164,6 +178,16 @@ void setup() {
         NULL,
         1
     );
+
+    xTaskCreatePinnedToCore(
+    task_telemetry,
+    "TaskTelemetry",
+    4096,
+    NULL,
+    1,
+    NULL,
+    1
+);
 }
 
 // ===============================

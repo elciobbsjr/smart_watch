@@ -3,6 +3,7 @@
 #include "drivers/mpu6500.h"
 #include "config.h"
 #include "mqtt_mgr.h"
+#include "telemetry.h"
 
 
 #if DEBUG_MODE
@@ -15,6 +16,7 @@
   #define DEBUG_PRINTF(...)
 #endif
 
+extern SemaphoreHandle_t g_telemetryMutex;
 
 static unsigned long freeFallStart = 0;
 
@@ -411,29 +413,17 @@ void task_sensors(void *pvParameters) {
 
             lastDebug = now;
         }
+        
+        if (xSemaphoreTake(g_telemetryMutex, pdMS_TO_TICKS(5))) {
 
-        // =============================
-        // ENVIO MQTT
-        // =============================
-        static unsigned long lastMqttSend = 0;
+            g_telemetry.pitch = pitch;
+            g_telemetry.roll = roll;
+            g_telemetry.accMag = accMag;
+            g_telemetry.gyroMag = gyroMag;
+            g_telemetry.jerk = jerk;
+            g_telemetry.state_beta1 = fallState;
 
-        if (millis() - lastMqttSend > 500) {
-
-            if (mqtt_is_connected()) {
-
-                String payload = "{";
-                payload += "\"pitch\":" + String(pitch, 2) + ",";
-                payload += "\"roll\":" + String(roll, 2) + ",";
-                payload += "\"accMag\":" + String(accMag, 2) + ",";
-                payload += "\"gyroMag\":" + String(gyroMag, 2) + ",";
-                payload += "\"jerk\":" + String(jerk, 2) + ",";
-                payload += "\"state\":" + String(fallState);
-                payload += "}";
-
-                mqtt_publish("smartwatch/imu", payload);
-            }
-
-            lastMqttSend = millis();
+            xSemaphoreGive(g_telemetryMutex);
         }
 
 
