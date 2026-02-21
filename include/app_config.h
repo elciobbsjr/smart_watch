@@ -1,6 +1,8 @@
 #pragma once
 
 extern QueueHandle_t g_ppgQueue;
+extern QueueHandle_t g_ppgHeartQueue;
+extern QueueHandle_t g_ppgSpo2Queue;
 
 // ===== I2C =====
 #define I2C_SDA_PIN 21

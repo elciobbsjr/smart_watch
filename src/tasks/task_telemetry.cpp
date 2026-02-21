@@ -19,7 +19,9 @@ void task_telemetry(void *pvParameters)
             payload += "\"gyroMag\":" + String(g_telemetry.gyroMag, 2) + ",";
             payload += "\"jerk\":" + String(g_telemetry.jerk, 2) + ",";
             payload += "\"bpm\":" + String(g_telemetry.bpm, 1) + ",";
+            payload += "\"spo2\":" + String(g_telemetry.spo2, 1) + ",";
             payload += "\"estado_beta1\":" + String(g_telemetry.state_beta1);
+            
             payload += "}";
 
             mqtt_publish("smartwatch/telemetry", payload);

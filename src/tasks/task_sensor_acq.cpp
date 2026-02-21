@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include "task_sensor_acq.h"
 #include "../drivers/max30105_driver.h"
+#include "app_config.h"
 
 extern SemaphoreHandle_t g_i2cMutex;
 extern QueueHandle_t g_ppgQueue;
@@ -35,7 +36,8 @@ void taskSensorAcq(void *pvParameters)
             if (heartSensor.readSample(sample))
             {
                 // Envia para queue
-                xQueueSend(g_ppgQueue, &sample, 0);
+                xQueueSend(g_ppgHeartQueue, &sample, 0);
+                xQueueSend(g_ppgSpo2Queue,  &sample, 0);
 
                 /* DEBUG temporário a cada ~1s
                 debugCounter++;

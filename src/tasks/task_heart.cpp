@@ -3,6 +3,7 @@
 #include "telemetry.h"
 #include "heartRate.h"
 #include "../drivers/max30105_driver.h"
+#include "app_config.h"
 
 extern QueueHandle_t g_ppgQueue;
 extern SemaphoreHandle_t g_telemetryMutex;
@@ -37,7 +38,7 @@ void taskHeart(void *pvParameters)
 
     while (true)
     {
-        if (xQueueReceive(g_ppgQueue, &sample, portMAX_DELAY))
+        if (xQueueReceive(g_ppgHeartQueue, &sample, portMAX_DELAY))
         {
             long irValue = sample.ir;
 

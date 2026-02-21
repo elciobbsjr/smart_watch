@@ -11,6 +11,7 @@
 #include "tasks/task_telemetry.h"
 #include "drivers/max30105_driver.h"
 #include "tasks/task_sensor_acq.h"
+#include "tasks/task_spo2.h"
 
 // ===============================
 // Mutex global do barramento I2C
@@ -21,7 +22,8 @@ SemaphoreHandle_t g_telemetryMutex = nullptr;
 
 
 
-QueueHandle_t g_ppgQueue;
+QueueHandle_t g_ppgHeartQueue;
+QueueHandle_t g_ppgSpo2Queue;
 
 
 // ===============================
@@ -94,7 +96,8 @@ static void mqtt_connect_blocking() {
 // ===============================
 void setup() {
 
-    g_ppgQueue = xQueueCreate(32, sizeof(ppg_sample_t));
+    g_ppgHeartQueue = xQueueCreate(32, sizeof(ppg_sample_t));
+    g_ppgSpo2Queue  = xQueueCreate(32, sizeof(ppg_sample_t));
 
     #if DEBUG_MODE
         Serial.begin(115200);
@@ -195,6 +198,16 @@ void setup() {
     4096,
     NULL,
     2,
+    NULL,
+    1
+    );
+
+    xTaskCreatePinnedToCore(
+    taskSpO2,
+    "TaskSpO2",
+    4096,
+    NULL,
+    1,
     NULL,
     1
     );
