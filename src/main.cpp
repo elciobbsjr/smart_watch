@@ -13,6 +13,8 @@
 #include "tasks/task_sensor_acq.h"
 #include "tasks/task_spo2.h"
 
+
+volatile bool g_systemReady = false;
 // ===============================
 // Mutex global do barramento I2C
 // ===============================

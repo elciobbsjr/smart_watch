@@ -4,6 +4,7 @@
 #include "config.h"
 #include "mqtt_mgr.h"
 #include "telemetry.h"
+#include "app_config.h"
 
 
 #if DEBUG_MODE
@@ -154,6 +155,7 @@ static void calibrate_mpu() {
   acc_offset_z = (sum_az / ok) - 1.0f;
 
   Serial.println("Calibracao concluida!");
+  g_systemReady = true;
 }
 
 // =========================

@@ -1,12 +1,17 @@
 #include <Arduino.h>
 #include "telemetry.h"
 #include "mqtt_mgr.h"
-
+#include "app_config.h"
 void task_telemetry(void *pvParameters)
 {
-    const uint32_t SEND_INTERVAL_MS = 500;
+    const uint32_t SEND_INTERVAL_MS = 1000;
 
     while (true) {
+
+        if (!g_systemReady) {
+        vTaskDelay(pdMS_TO_TICKS(500));
+        continue;
+        }
 
         if (mqtt_is_connected()) {
 
@@ -18,8 +23,14 @@ void task_telemetry(void *pvParameters)
             payload += "\"accMag\":" + String(g_telemetry.accMag, 2) + ",";
             payload += "\"gyroMag\":" + String(g_telemetry.gyroMag, 2) + ",";
             payload += "\"jerk\":" + String(g_telemetry.jerk, 2) + ",";
-            payload += "\"bpm\":" + String(g_telemetry.bpm, 1) + ",";
-            payload += "\"spo2\":" + String(g_telemetry.spo2, 1) + ",";
+            if (g_telemetry.bpm > 0)
+                payload += "\"bpm\":" + String(g_telemetry.bpm, 1) + ",";
+            else
+                payload += "\"bpm\":null,";
+            if (g_telemetry.spo2 > 0)
+                payload += "\"spo2\":" + String(g_telemetry.spo2, 1) + ",";
+            else
+                payload += "\"spo2\":null,";
             payload += "\"state_beta1\":" + String(g_telemetry.state_beta1);
             
             payload += "}";

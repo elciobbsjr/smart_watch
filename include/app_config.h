@@ -3,6 +3,7 @@
 extern QueueHandle_t g_ppgQueue;
 extern QueueHandle_t g_ppgHeartQueue;
 extern QueueHandle_t g_ppgSpo2Queue;
+extern volatile bool g_systemReady;
 
 // ===== I2C =====
 #define I2C_SDA_PIN 21
