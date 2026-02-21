@@ -20,7 +20,7 @@ void task_telemetry(void *pvParameters)
             payload += "\"jerk\":" + String(g_telemetry.jerk, 2) + ",";
             payload += "\"bpm\":" + String(g_telemetry.bpm, 1) + ",";
             payload += "\"spo2\":" + String(g_telemetry.spo2, 1) + ",";
-            payload += "\"estado_beta1\":" + String(g_telemetry.state_beta1);
+            payload += "\"state_beta1\":" + String(g_telemetry.state_beta1);
             
             payload += "}";
 
