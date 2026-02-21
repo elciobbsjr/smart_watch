@@ -1,5 +1,4 @@
 #include "max30105_driver.h"
-#include "heartRate.h"
 
 bool MAX30105Driver::begin(TwoWire &wirePort)
 {
@@ -8,80 +7,37 @@ bool MAX30105Driver::begin(TwoWire &wirePort)
 
     sensor.setup(
         40,   // LED brightness
-        4,    // average
+        4,    // sample average
         2,    // mode (Red + IR)
         200,  // sample rate
         411,  // pulse width
         16384 // ADC range
     );
 
+    sensor.clearFIFO();
+
     return true;
 }
 
-bool MAX30105Driver::fingerDetected()
+bool MAX30105Driver::readSample(ppg_sample_t &sample)
 {
-    return irAvg > fingerThreshold;
-}
+    // Atualiza o sensor e FIFO
+    sensor.check();
 
-float MAX30105Driver::getBPM()
-{
-    return smoothedBPM;
-}
+    // Enquanto houver dados no FIFO
+    if (sensor.available())
+    {
+        sample.ir  = sensor.getIR();
+        sample.red = sensor.getRed();
+        sample.timestamp = millis();
 
-void MAX30105Driver::update()
-{
-    long irValue = sensor.getIR();
-
-    // Média exponencial do IR
-    irAvg = (irAvg * 0.9) + (irValue * 0.1);
-
-    if (!fingerDetected()) {
-        smoothedBPM = 0;
-        return;
+        sensor.nextSample();
+        return true;
     }
 
-    if (checkForBeat(irValue)) {
-        processBeat(irValue);
-    }
+    return false;
 }
-
-void MAX30105Driver::processBeat(long irValue)
+bool MAX30105Driver::fingerDetected(uint32_t irValue)
 {
-    long now = millis();
-    long delta = now - lastBeat;
-    lastBeat = now;
-
-    if (delta < 300 || delta > 2000)
-        return;
-
-    float rawBPM = 60.0 / (delta / 1000.0);
-
-    if (rawBPM < 45 || rawBPM > 150)
-        return;
-
-    rates[rateSpot++] = rawBPM;
-    rateSpot %= RATE_SIZE;
-
-    float avgBPM = 0;
-    for (byte i = 0; i < RATE_SIZE; i++)
-        avgBPM += rates[i];
-
-    avgBPM /= RATE_SIZE;
-
-    if (smoothedBPM == 0) {
-        smoothedBPM = avgBPM;
-        return;
-    }
-
-    float variation = abs(avgBPM - smoothedBPM);
-    float alpha;
-
-    if (variation < 5)
-        alpha = alphaFast;
-    else if (variation < 15)
-        alpha = alphaSlow;
-    else
-        return;
-
-    smoothedBPM = alpha * avgBPM + (1 - alpha) * smoothedBPM;
+    return irValue > fingerThreshold;
 }

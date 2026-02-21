@@ -1,5 +1,7 @@
 #pragma once
 
+extern QueueHandle_t g_ppgQueue;
+
 // ===== I2C =====
 #define I2C_SDA_PIN 21
 #define I2C_SCL_PIN 22

@@ -1,31 +1,28 @@
 #pragma once
+
 #include <Arduino.h>
 #include <Wire.h>
-#include "MAX30105.h"
+#include <MAX30105.h>
 
-class MAX30105Driver {
+typedef struct {
+    uint32_t ir;
+    uint32_t red;
+    uint32_t timestamp;
+} ppg_sample_t;
+
+class MAX30105Driver
+{
 public:
-    bool begin(TwoWire &wirePort = Wire);
-    void update();
-    float getBPM();
-    bool fingerDetected();
+    bool begin(TwoWire &wirePort);
+
+    // Lê uma amostra do FIFO
+    bool readSample(ppg_sample_t &sample);
+
+    // Verifica presença de dedo (IR bruto)
+    bool fingerDetected(uint32_t irValue);
 
 private:
     MAX30105 sensor;
 
-    static const int RATE_SIZE = 4;
-    float rates[RATE_SIZE];
-    byte rateSpot = 0;
-
-    long lastBeat = 0;
-    float smoothedBPM = 0;
-
-    long irAvg = 0;
-
-    const float alphaFast = 0.4;
-    const float alphaSlow = 0.15;
-
-    const long fingerThreshold = 5000;
-
-    void processBeat(long irValue);
+    const uint32_t fingerThreshold = 50000; // Ajustável
 };
