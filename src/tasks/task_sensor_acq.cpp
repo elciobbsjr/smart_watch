@@ -23,7 +23,7 @@ void taskSensorAcq(void *pvParameters)
         xSemaphoreGive(g_i2cMutex);
     }
 
-    Serial.println("Sensor acquisition task iniciada.");
+    //Serial.println("Sensor acquisition task iniciada.");
 
     uint32_t debugCounter = 0;
 

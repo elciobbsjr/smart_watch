@@ -286,9 +286,9 @@ void task_sensors(void *pvParameters) {
                 {
                     if (now - immobilityStart > IMMOBILITY_TIME_MS) {
                         #if DEBUG_MODE
-                        Serial.println("QUEDA CONFIRMADA!");
+                        //Serial.println("QUEDA CONFIRMADA!");
                     #else
-                        Serial.println("ALERTA: QUEDA CONFIRMADA!");
+                        //Serial.println("ALERTA: QUEDA CONFIRMADA!");
                     #endif
 
                     store_event(pitch, roll, accMag, gyroMag, jerk, fallState);
@@ -345,19 +345,19 @@ void task_sensors(void *pvParameters) {
             // MODO DEBUG → detalhado
             switch (fallState) {
                 case NORMAL:
-                    Serial.println("Estado -> NORMAL");
+                    //Serial.println("Estado -> NORMAL");
                     break;
 
                 case FREE_FALL:
-                    Serial.println("Estado -> POSSIVEL QUEDA (FREE FALL)");
+                    //Serial.println("Estado -> POSSIVEL QUEDA (FREE FALL)");
                     break;
 
                 case IMPACT:
-                    Serial.println("Estado -> IMPACTO DETECTADO!");
+                    //Serial.println("Estado -> IMPACTO DETECTADO!");
                     break;
 
                 case IMMOBILITY_CHECK:
-                    Serial.println("Estado -> VERIFICANDO IMOBILIDADE...");
+                    //Serial.println("Estado -> VERIFICANDO IMOBILIDADE...");
                     break;
             }
 
